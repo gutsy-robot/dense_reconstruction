@@ -27,7 +27,7 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
     is_front = repmat(is_front, 1, 3);
 
     % get a mask which we can multiply with transformed fusion map.
-    is_front_mask = true(size(fusion_map.pointcloud.Location, 1), 3) .* is_front;
+    is_front_mask = and(true(size(fusion_map.pointcloud.Location, 1), 3), is_front);
 
     % perform element wise multiplication with transformed points.
     transformed_pts_valid = map_camera_frame.Location .* is_front_mask;
@@ -40,21 +40,27 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
     % get points to be projected and reshape to (3, num of pts to be projected).
     pts_for_proj = reshape(transformed_pts_valid(is_front_mask), [], 3)';
 
-    proj_pts = camera_matrix * pts_for_proj;
-    % proj_pts = proj_pts';
+    % disp(size(pts_for_proj));
+    proj_pts_img_plane = camera_matrix * pts_for_proj;
 
-    % get unhomogenised coordinates.
-    proj_pts = proj_pts ./ proj_pts(3, :);
+    % get homogenised coordinates.
+    proj_pts_img_plane = proj_pts_img_plane ./ proj_pts_img_plane(3, :);
 
-    transformed_pts_valid(is_front_mask) = reshape(proj_pts', [], 1);
+    transformed_pts_valid(is_front_mask) = reshape(proj_pts_img_plane', [], 1);
 
+    % disp(size(transformed_pts_valid))
     % check for boundaries.
     within_boundary = transformed_pts_valid(:, 1) > 0 & transformed_pts_valid(:, 2) > 0 & transformed_pts_valid(:, 1) < h & transformed_pts_valid(:, 2) < w;
     
+    within_boundary = repmat(within_boundary, 1, 3);
+    
+    % disp(size(within_boundary));
     % overall valid points.
     proj_flag = and(is_front_mask, within_boundary);
 
     % form a matrix of the global points which are valid.
+    % disp(size(fusion_map.pointcloud.Location(is_front_mask)));
+    % disp(size(fusion_map.pointcloud.Location(proj_flag)));
     valid_global_pts = reshape(fusion_map.pointcloud.Location(proj_flag), [], 3);
     
     % retrieve the pixel location that correspond to these valid points.
@@ -93,7 +99,7 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
 
     proj_flag = proj_flag(:, 1);
 
-    disp("all set");
+    % disp("all set");
 
     %==== Output the projected map in a struct ====
     %==== (Notice: proj_points[], proj_colors[], and proj_normals[] are all 3D matrices with size h*w*3) ====
