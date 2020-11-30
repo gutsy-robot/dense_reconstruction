@@ -14,7 +14,28 @@ function updated_map = avgProjMapWithInputData(proj_map, input_data, alpha, h, w
     %==== (Hint: apply is_use[] as a mask in vectorization) ====
 
     % Write your code here...
-    
+   
+    updated_points = proj_points;
+    updated_colors = proj_colors;
+    updated_normals = proj_normals;
+    updated_ccounts = proj_ccounts;
+    updated_times = proj_times;
+
+    is_use_3d = repmat(is_use, 1, 3);
+    proj_ccounts_3d = repmat(proj_ccounts, 1, 3);
+    proj_times_3d = repmat(proj_map, 1, 3);
+    alpha_3d = repmat(alpha, 1, 3);
+
+    % valid_proj_points = proj_points(is_use_3d);
+
+    updated_points(is_use_3d) =  (proj_ccounts_3d(is_use_3d) .* proj_points(is_use_3d) + alpha_3d(is_use_3d) .* input_points(is_use_3d)) ./ (proj_ccounts_3d(is_use_3d) + alpha_3d(is_use_3d));
+    updated_normals(is_use_3d) =  (proj_ccounts_3d(is_use_3d) .* proj_normals(is_use_3d) + alpha_3d(is_use_3d) .* input_normals(is_use_3d)) ./ (proj_ccounts_3d(is_use_3d) + alpha_3d(is_use_3d));
+
+    updated_colors(is_use_3d) = input_points(is_use_3d);
+    updated_ccounts(is_use) = proj_ccounts(is_use) + alpha(is_use);
+    updated_times(is_use) = t;
+
+    disp('done averaging')
     
     %==== Output the updated projected map in a struct ====
     updated_map = struct('points', updated_points, 'colors', updated_colors, 'normals', updated_normals, 'ccounts', updated_ccounts, 'times', updated_times);
