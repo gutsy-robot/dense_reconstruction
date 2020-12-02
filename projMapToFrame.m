@@ -16,12 +16,12 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
     
     % convert the global fusion map to current camera frame.
     % this will give us depth of the global points in the current camera frame.
-    map_camera_frame = pctransform(fusion_map.pointcloud, tform.invert);
+    map_transformed = pctransform(fusion_map.pointcloud, tform.invert);
     % the size of the transformed pt cloud is same as original.
     
     % check if the depth of these points is positive.
     % this will return (num_points, 1)
-    is_front = map_camera_frame.Location(:, 3) > 0;
+    is_front = map_transformed.Location(:, 3) > 0;
 
     % then we convert it to the desired shape i.e (num_points, 3)
     is_front = repmat(is_front, 1, 3);
@@ -30,7 +30,7 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
     is_front_mask = and(true(size(fusion_map.pointcloud.Location, 1), 3), is_front);
 
     % perform element wise multiplication with transformed points.
-    transformed_pts_valid = map_camera_frame.Location .* is_front_mask;
+    transformed_pts_valid = map_transformed.Location .* is_front_mask;
 
     % define the camera intrinsics.
     camera_matrix = [fx 0 cx; 0 fy cy; 0 0 1];
@@ -38,10 +38,8 @@ function [proj_map, proj_flag] = projMapToFrame(fusion_map, h, w, tform, cam_par
     % lets check which of these points lie inside the image.
 
     % get points to be projected and reshape to (3, num of pts to be projected).
-    pts_for_proj = reshape(transformed_pts_valid(is_front_mask), [], 3)';
-
-    % disp(size(pts_for_proj));
-    proj_pts_img_plane = camera_matrix * pts_for_proj;
+    
+    proj_pts_img_plane = camera_matrix * reshape(transformed_pts_valid(is_front_mask), [], 3)';
 
     % get homogenised coordinates.
     proj_pts_img_plane = proj_pts_img_plane ./ proj_pts_img_plane(3, :);

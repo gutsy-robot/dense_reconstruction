@@ -32,19 +32,26 @@ function [tform valid_pair_num error] = getRigidTransform(new_pointcloud, ref_po
         % Write your code here...
         for row = 1 : m
             for col = 1 : n
-                if all(assoc_pts(row, col, :) ~= 0)
+
+                % filter valid point.
+                if any(assoc_pts(row, col, :) ~= 0)
+                    % disp("changed")
+                    valid_pair_num = valid_pair_num + 1;
+
                     G = zeros(3, 6);
                     G(1:3, 1:3) = toSkewSym(assoc_pts(row, col, :));
+                    
                     G(1:3, 4:6) = eye(3);
                     % disp(G);
                     % disp(ref_normals(row, col, :));
                     N = reshape(ref_normals(row, col, :), [3, 1]);
 
-                    A((row - 1) * n + col, :) = transpose(N) * G;
-                    b((row - 1) * n + col, :) = transpose(N) * (reshape(ref_pts(row, col, :) - assoc_pts(row, col, :), [3, 1]));
-                    valid_pair_num = valid_pair_num + 1;
+                    b((n - 1) * row + col, :) = transpose(N) * (reshape(ref_pts(row, col, :) - assoc_pts(row, col, :), [3, 1]));
+
+                    A((n - 1) * row + col, :) = transpose(N) * G;
 
                 else
+                    % no need to update anything here.
                     continue;
 
                 end
@@ -55,10 +62,7 @@ function [tform valid_pair_num error] = getRigidTransform(new_pointcloud, ref_po
         %==== TODO: Solve for the 6-vector xi[] of rigid body transformation ====
 
         % Write your code here...
-        A_sp = sparse(A);
-        [x_chol, r] = solve_chol2(A_sp, b);
-        xi = transpose(x_chol);
-
+        xi = pinv(A) * b;
         %==== Coerce xi[] back into SE(3) ====
         %==== (Notice: tmp_tform[] is defined in the format of right-multiplication) ====
         R = toSkewSym(xi(1:3)) + eye(3);
